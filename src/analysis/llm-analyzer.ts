@@ -54,7 +54,8 @@ export async function analyzeCodeChunk(
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: config.ollama.model,
+          model: config.ollama.chatModel,
+          think: false, // skip reasoning tokens on thinking models (ignored by others)
           messages: [
             { role: 'system', content: 'You are a code analysis expert.' },
             { role: 'user', content: prompt }

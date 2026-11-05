@@ -48,7 +48,7 @@ export async function handleCodeQuery(
       endLine: result.endLine as any,
       codeSnippet: result.codeSnippet as any,
       summary: (result.analysis as any).summary,
-      similarity: 0  // We'll calculate this
+      similarity: result.score ?? 0
     }));
     
     // Calculate execution time
@@ -100,7 +100,8 @@ Explain how they relate to the user's query and what insights can be drawn from 
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: config.ollama.model,
+        model: config.ollama.chatModel,
+        think: false, // skip reasoning tokens on thinking models (ignored by others)
         prompt,
         temperature: 0.3,
         max_tokens: 500,
