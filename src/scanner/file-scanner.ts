@@ -36,23 +36,26 @@ export async function scanDirectory(
     includeContent: options.includeContent ?? false
   };
 
-  // Create a combined pattern for glob
-  const includePattern = `{${mergedOptions.includePatterns.join(',')}}`;
-  
-  // Create depth pattern based on maxDepth
-  const depthPattern = mergedOptions.maxDepth > 0 
-    ? Array(mergedOptions.maxDepth).fill('*/').join('')
-    : '**';
-  
-  // Combine patterns
-  const pattern = path.join(rootDir, depthPattern, includePattern);
-  
-  // Find files
-  const files = glob.sync(pattern, {
-    ignore: mergedOptions.excludePatterns,
-    nodir: true
-  });
-  
+  // Patterns without a slash (e.g. '*.ts') match at any depth
+  const patterns = mergedOptions.includePatterns.map(p => (p.includes('/') ? p : `**/${p}`));
+
+  // Find files (cwd-relative so brace patterns and excludes behave)
+  let relFiles = new Set<string>();
+  for (const pattern of patterns) {
+    for (const f of glob.sync(pattern, {
+      cwd: rootDir,
+      ignore: mergedOptions.excludePatterns,
+      nodir: true
+    })) {
+      relFiles.add(f);
+    }
+  }
+
+  // maxDepth = number of directories below rootDir (0 = unlimited)
+  const files = [...relFiles]
+    .filter(f => mergedOptions.maxDepth <= 0 || f.split('/').length - 1 <= mergedOptions.maxDepth)
+    .map(f => path.join(rootDir, f));
+
   // Process each file
   const filePromises = files.map(async (filePath: string) => {
     try {

@@ -20,6 +20,7 @@ export interface StoredAnalysis {
   endLine: number;
   codeSnippet: string;
   analysis: AnalysisResult;
+  score?: number; // similarity score, set on search results
   embedding: number[]; // Keep this required, search results should always have embeddings
   timestamp: string;
 }
@@ -108,7 +109,7 @@ export class CodeVectorStorage {
   async searchSimilarCode(
     embedding: number[],
     limit: number = 5,
-    scoreThreshold: number = 0.7
+    scoreThreshold: number = config.vectorDb.scoreThreshold
   ): Promise<StoredAnalysis[]> {
     try {
       const results = await this.client.search(this.collection, {
@@ -138,7 +139,8 @@ export class CodeVectorStorage {
             codeSnippet: payload.codeSnippet,
             analysis: payload.analysis,
             embedding: result.vector as number[], // Vector is guaranteed by filter
-            timestamp: payload.timestamp
+            timestamp: payload.timestamp,
+            score: result.score
           };
         });
     } catch (error) {

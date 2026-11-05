@@ -19,6 +19,9 @@ async function runTest() {
     console.log('Analysis result:', JSON.stringify(analysisResult, null, 2));
     
     // Test query if analysis was successful
+    if (analysisResult.error || !(analysisResult.filesAnalyzed > 0)) {
+      throw new Error(`Analysis analyzed no files: ${JSON.stringify(analysisResult).slice(0, 300)}`);
+    }
     if (analysisResult.filesAnalyzed > 0) {
       console.log('Testing codebase query...');
       
@@ -33,6 +36,7 @@ async function runTest() {
     console.log('Test completed successfully!');
   } catch (error) {
     console.error('Test failed:', error);
+    process.exitCode = 1;
   }
 }
 

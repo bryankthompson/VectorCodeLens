@@ -66,6 +66,7 @@ export interface Config {
   ollama: {
     enabled: boolean;
     model: string;
+    chatModel: string;
   };
   
   scanner: {
@@ -81,6 +82,7 @@ export interface Config {
     url: string;
     collection: string;
     dimensions: number;
+    scoreThreshold: number;
     distance: string;
   };
 }
@@ -123,7 +125,7 @@ export const config: Config = {
   // Nested config structures for backward compatibility
   llm: {
     url: process.env.LLM_SERVICE_URL || 'http://localhost:11434',
-    embeddingsUrl: process.env.LLM_EMBEDDINGS_URL || process.env.LLM_SERVICE_URL || 'http://localhost:11434',
+    embeddingsUrl: process.env.LLM_EMBEDDINGS_URL || `${process.env.LLM_SERVICE_URL || 'http://localhost:11434'}/api/embeddings`,
     temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.7'),
     maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '2048', 10),
     retryAttempts: parseInt(process.env.LLM_RETRY_ATTEMPTS || '3', 10),
@@ -132,12 +134,15 @@ export const config: Config = {
   
   ollama: {
     enabled: process.env.OLLAMA_ENABLED !== 'false', // Default to true unless explicitly disabled
-    model: process.env.OLLAMA_MODEL || process.env.LLM_MODEL || 'rjmalagon/gte-qwen2-1.5b-instruct-embed-f16'
+    // Embedding model (OLLAMA_MODEL kept for backward compatibility)
+    model: process.env.OLLAMA_MODEL || process.env.LLM_MODEL || 'nomic-embed-text',
+    // Chat/generation model: an embedding model cannot chat, so this is separate
+    chatModel: process.env.OLLAMA_CHAT_MODEL || 'llama3.2'
   },
   
   scanner: {
     maxDepth: parseInt(process.env.SCANNER_MAX_DEPTH || '10', 10),
-    defaultIncludePatterns: (process.env.SCANNER_INCLUDE_PATTERNS || '**/*.{ts,js,py,java,cpp,c,h,hpp,cs,rb,go,rs,php,kt,swift}').split(','),
+    defaultIncludePatterns: (process.env.SCANNER_INCLUDE_PATTERNS || '**/*.{ts,js,py,java,cpp,c,h,hpp,cs,rb,go,rs,php,kt,swift}').split(';'), // ';'-separated: commas live inside {a,b} braces,
     defaultExcludePatterns: [
       '**/node_modules/**', 
       '**/dist/**', 
@@ -158,7 +163,9 @@ export const config: Config = {
     url: process.env.VECTOR_DB_URL || 'http://localhost:6333',
     collection: process.env.VECTOR_COLLECTION || 'code_analysis',
     dimensions: parseInt(process.env.VECTOR_DIMENSIONS || '1536', 10),
-    distance: process.env.VECTOR_DISTANCE || 'Cosine'
+    distance: process.env.VECTOR_DISTANCE || 'Cosine',
+    // Text-to-code cosine scores are typically 0.4-0.7, so 0.7 returned nothing
+    scoreThreshold: parseFloat(process.env.VECTOR_SCORE_THRESHOLD || '0.3')
   },
   
   // Check if services are enabled
